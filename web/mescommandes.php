@@ -3,82 +3,11 @@
 
 session_start();
 $connect = mysqli_connect("localhost", "root", "", "pannier");
-$commandePasse = false;
-if(isset($_POST["add_to_cart"]))
-{
-	if(isset($_SESSION["shopping_cart"]))
-	{
-		$item_array_id = array_column($_SESSION["shopping_cart"], "item_id");
-		if(!in_array($_GET["id"], $item_array_id))
-		{
-			$count = count($_SESSION["shopping_cart"]);
-			$item_array = array(
-				'item_id'			=>	$_GET["id"],
-				'item_name'			=>	$_POST["hidden_name"],
-				'item_price'		=>	$_POST["hidden_price"],
-				'item_quantity'		=>	$_POST["quantity"]
-			);
-			$_SESSION["shopping_cart"][$count] = $item_array;
-		}
-		else
-		{
-			echo '<script>alert("Item Already Added")</script>';
-		}
-	}
-	else
-	{
-		$item_array = array(
-			'item_id'			=>	$_GET["id"],
-			'item_name'			=>	$_POST["hidden_name"],
-			'item_price'		=>	$_POST["hidden_price"],
-			'item_quantity'		=>	$_POST["quantity"]
-		);
-		$_SESSION["shopping_cart"][0] = $item_array;
-	}
-}
-
-if(isset($_GET["action"]))
-{
-	if($_GET["action"] == "delete")
-	{
-		foreach($_SESSION["shopping_cart"] as $keys => $values)
-		{
-			if($values["item_id"] == $_GET["id"])
-			{
-				unset($_SESSION["shopping_cart"][$keys]);
-				echo '<script>alert("Item Removed")</script>';
-				echo '<script>window.location="shop.php"</script>';
-			}
-		}
-	}
-	else if($_GET["action"] == "Passer Commande" && json_encode($_SESSION["shopping_cart"]) != '[]')
-	{
-
-		$cartdata = json_encode($_SESSION["shopping_cart"]);
-		$price = 0;
-		foreach($_SESSION["shopping_cart"] as $keys => $values)
-		{			
-		$price = $price + ($values["item_quantity"] * $values["item_price"]);
-		}
-
-		$_SESSION["shopping_cart"] = [];
+$userid = 1;
+$commandes = $connect->query("SELECT * FROM `commandes` WHERE `commandes`.`userid` = '$userid'") or die("db error");
 
 
-								
-
-		$obj = $connect->query("INSERT INTO `commandes` (`id`, `cart`, `price`, `userid`) VALUES (NULL, '$cartdata', '$price', '1');");
-		if(!$obj)
-	    {
-	        /*echo("Error description: " . $mysqli -> error);
-	        die();*/
-	    }
-	    else
-	    {
-	    	$commandePasse = true;
-	    }
-
-	}
-} ?>
+ ?>
 <!DOCTYPE HTML>
 
 <html>
@@ -181,18 +110,6 @@ if(isset($_GET["action"]))
 			</div>
 		</div>
 	</nav>
-<center>
-<form action="mescommandes.php">
-			<input type="submit" style="margin-top:5px;" class="btn btn-success" value="Mes commandes" />
-			</form>
-
-</center>
-<br>
-<form align="center" action="search.php" method="post">
-	<input type="text" name="valueToSearch", placeholder="Article to search">
-	<input type="submit" name="search" value="search"><br><br>
-
-</form>
 
 
 	<header id="fh5co-header" class="fh5co-cover fh5co-cover-sm" role="banner" style="float:none;" data-stellar-background-ratio="0.5" >
@@ -201,60 +118,20 @@ if(isset($_GET["action"]))
 				<div class="col-md-8 col-md-offset-2 text-center">
 					<div class="display-t">
 						<div class="display-tc animate-box" data-animate-effect="fadeIn">
-							<?php
-				$query = "SELECT * FROM tbl_product ORDER BY id ASC";
-				$result = mysqli_query($connect, $query);
-				if(mysqli_num_rows($result) > 0)
-				{
-					while($row = mysqli_fetch_array($result))
-					{
-				?>
-<!-- sort now &row is the table -->
-
-
-
-
-
-
-
-
-
-
-
-
-				<div class="col-md-4">
-				<form method="post" action="shop.php?action=add&id=<?php echo $row["id"]; ?>">
-					<div style="border:1px solid #333; background-color:#f1f1f1; border-radius:5px; padding:16px;" align="center">
-						<img src="images/<?php echo $row["image"]; ?>" class="img-responsive" /><br />
-
-						<h4 class="text-info"><?php echo $row["name"]; ?></h4>
-
-						<h4 class="text-danger">$ <?php echo $row["price"]; ?></h4>
-
-						<input type="text" name="quantity" value="1" class="form-control" />
-
-						<input type="hidden" name="hidden_name" value="<?php echo $row["name"]; ?>" />
-
-						<input type="hidden" name="hidden_price" value="<?php echo $row["price"]; ?>" />
-
-						<input type="submit" name="add_to_cart" style="margin-top:5px;" class="btn btn-success" value="Add to Cart" />
-
-					</div>
-				</form>
-			</div> 
-
-			
-			<?php
-					}
-				}
-			?>
+							
 
 
 
 		
 			<div style="clear:both"></div>
 			<br />
-			<h3>Order Details</h3>
+			<h3>Mes commandes</h3>
+			<?php
+
+                      while($row = $commandes->fetch_assoc()) {  
+                      	$cart = json_decode($row["cart"], true);
+                      ?>
+  			<h3>Commande numéro <?php echo $row["id"]?></h3>
 			<div class="table-responsive">
 				<table class="table table-bordered">
 					<tr>
@@ -265,10 +142,8 @@ if(isset($_GET["action"]))
 						<th width="5%">Action</th>
 					</tr>
 					<?php
-					if(!empty($_SESSION["shopping_cart"]))
-					{
 						$total = 0;
-						foreach($_SESSION["shopping_cart"] as $keys => $values)
+						foreach($cart as $keys => $values)
 						{
 					?>
 					<tr>
@@ -276,7 +151,7 @@ if(isset($_GET["action"]))
 						<td><?php echo $values["item_quantity"]; ?></td>
 						<td>$ <?php echo $values["item_price"]; ?></td>
 						<td>$ <?php echo number_format($values["item_quantity"] * $values["item_price"], 2);?></td>
-						<td><a href="shop.php?action=delete&id=<?php echo $values["item_id"]; ?>"><span class="text-danger">Remove</span></a></td>
+						<td></td>
 					</tr>
 					<?php
 							$total = $total + ($values["item_quantity"] * $values["item_price"]);
@@ -285,25 +160,22 @@ if(isset($_GET["action"]))
 					<tr>
 						<td colspan="3" align="right">Total</td>
 						<td align="right">$ <?php echo number_format($total, 2); ?></td>
-						<td></td>
+						<td>
+
+
+
+							<a href="admin/deleteCommande.php?id=<?php echo $row["id"]; ?>"><span class="text-danger">Remove</span></a>
+						</td>
 					</tr>
-					<?php
-					}
-					?>
+					
 						
 				</table>
 			</div>
-			<form>
-			<?php
 
-			if(json_encode($_SESSION["shopping_cart"]) != "[]")
-			{
-				?>
-			<input type="submit" name="action" style="margin-top:5px;" class="btn btn-success" value="Passer Commande" />
-			</form>
 			<?php
-		}
-		?>
+					}
+					?>
+			
 
 		</div>
 	</div>

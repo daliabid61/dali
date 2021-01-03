@@ -12,6 +12,7 @@ $obj2 = $mysqli->query("DELETE FROM `commandes` WHERE `commandes`.`id` = $theId"
 
 echo "1";
 
+    header('Location:../mescommandes.php');
 
 
 
